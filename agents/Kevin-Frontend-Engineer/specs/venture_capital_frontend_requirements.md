@@ -1,110 +1,107 @@
-# Venture Capital — Frontend Requirements & API Contract (Kevin)
+# Frontend requirements & API questions — Venture Capital Product
 
-## Situation
-Alex has created the discovery PRD for the "venture capital" feature. Engineering needs backend feasibility & effort estimates before design and implementation can begin. Frontend must specify what data and API shapes it needs so backend can estimate and design appropriately.
+Status: Draft
+Owner: Kevin (Frontend)
+Related product decisions: output/specs/venture_capital_product_decisions.md
+Related backend feasibility: output/specs/venture_capital_backend_feasibility.md
 
-## Objective
-Provide a clear, minimal, and actionable API contract and frontend acceptance criteria to enable Marcus to produce the backend feasibility doc (APIs, DB sketch, infra, scalability, privacy blockers, effort estimates).
+Situation
+- Product has finalized PII retention/deletion policy and search QPS sizing (MEDIUM: 200 QPS baseline, autoscale to 2,000 QPS).
+- Backend work (PII handling, DB schema, search) is planned by Marcus and is blocking frontend implementation for search and PII-sensitive views.
 
-## High-level UI surface (for alignment)
-- List view: searchable, filterable, paginated list of venture profiles.
-- Detail view: full profile with metrics, founder(s), fundraising history, documents/links.
-- Action(s): Save/Bookmark, Express interest (contact request), Share.
-- Admin/curation panel (future): flagging, edit metadata.
+Purpose
+- Document frontend requirements, acceptance criteria, and concrete API contract questions we need Marcus/backend to confirm before frontend implementation begins.
 
-## Key data requirements (per venture)
-- id (string)
-- name (string)
-- short_description (string, 140 chars)
-- full_description (string, markdown/html optional)
-- sectors (string[])
-- stage (enum: pre-seed, seed, series_a, series_b, growth)
-- location (string, country/state)
-- headline_metrics: { metric_name: string, value: string | number }
-- fundraising: { raised_amount: number, currency: string, last_round_date: ISO8601 }
-- founders: [{ id, name, title, public_profile_url }]  // NO PII like email/phone exposed by default
-- logo_url (string)
-- website_url, pitch_deck_url, demo_url
-- tags (string[])
-- created_at, updated_at
+Key assumptions
+- Auth uses JWT (frontend will store in memory + secure cookie for refresh). Confirm token shape and expiry.
+- RBAC will be provided by backend via roles/permissions on user payload or separate endpoint.
+- Backend will indicate which fields are PII and what redaction state they are in (raw | redacted | deleted).
 
-## Required API endpoints (frontend needs these to implement flows)
-1) GET /api/v1/ventures
-- Query params: q (search), sectors[], stage[], location, tags[], sort (relevance|newest|raised), page_size (<=100), cursor (optional)
-- Returns: { items: Venture[], next_cursor?: string, total_count?: number }
-- Notes: Prefer cursor-based pagination for scalability; frontend can accept page-based if backend prefers.
+Required API endpoints (frontend expectations)
+1. GET /api/v1/search
+   - Query params: q (string), page (number) OR cursor (string), per_page (number)
+   - Response: { results: SearchResult[], total_count?: number, next_cursor?: string }
+   - Must include rate-limit headers (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
+   - Questions: prefer page/limit or cursor? Is total_count provided for pagination UI?
 
-2) GET /api/v1/ventures/{id}
-- Returns: full Venture object (fields above). Include `public_contact_allowed: boolean` to indicate if contact info or express-interest flow is permitted.
+2. GET /api/v1/users/:id
+   - Returns user profile including PII metadata fields: { id, name, email?, pii_status: { email: 'raw'|'redacted'|'deleted' }, ... }
+   - Questions: which fields are considered PII and how is pii_status represented?
 
-3) POST /api/v1/ventures/{id}/express_interest
-- Body: { user_id, message? }
-- Returns: 202 Accepted or 200 with outcome
-- Notes: This triggers backend workflows (email/notification); frontend shows success/failure states.
+3. POST /api/v1/pii/deletion-requests
+   - Payload: { resource_type, resource_id, requester_id }
+   - Response: { request_id, status }
+   - Questions: workflow for deletion requests? webhook/callback on completion?
 
-4) POST /api/v1/ventures/{id}/bookmark
-- Body: { user_id }
-- Returns: 200 / 201
+4. RBAC & auth
+   - Endpoint or claim that exposes roles/permissions for current user. If roles affect which PII is visible, frontend needs role names and allowed actions.
 
-5) GET /api/v1/ventures/stats
-- Returns aggregated metrics for dashboard (optional for MVP)
+5. Search tuning & autoscaling
+   - Given QPS sizing, will backend return HTTP 429 on throttling? Any retry recommendations or backoff headers?
 
-## Response shape example (list)
-{
-  "items": [
-    {
-      "id": "vc_123",
-      "name": "Acme Robotics",
-      "short_description": "Autonomous warehouse robots",
-      "logo_url": "https://...",
-      "sectors": ["robotics","logistics"],
-      "stage": "series_a",
-      "headline_metrics": [{"metric_name":"ARR","value":"$2.1M"}],
-      "created_at": "2025-09-01T12:00:00Z"
-    }
-  ],
-  "next_cursor": "abc123",
-  "total_count": 234
-}
+6. Error contract
+   - All endpoints must return structured errors: { code: string, message: string, details?: object }
 
-## Performance & SLAs (frontend expectations)
-- List endpoint: p95 latency < 300ms for cached queries, < 1s for cold queries.
-- Support page_size up to 50 for reasonable UX.
-- Provide CDN-able logo_url and caching headers for media.
+TypeScript interfaces (frontend stubs)
+- SearchResult
+  interface SearchResult {
+    id: string;
+    type: string;
+    title: string;
+    snippet?: string;
+    pii_meta?: { [field: string]: 'raw' | 'redacted' | 'deleted' };
+  }
 
-## Auth & Authorization
-- Auth: JWT access token in Authorization header for user-specific actions (bookmark, express_interest).
-- Public read-only list: allow unauthenticated read for discovery (depends on privacy). If not allowed, specify.
-- Role-based flags: `is_admin`, `is_curator` for admin endpoints.
+- APIError
+  interface APIError { code: string; message: string; details?: Record<string, any> }
 
-## Privacy & PII constraints (frontend decisions relying on backend)
-- DO NOT return email/phone in public GET /ventures or /ventures/{id}.
-- If contact flow is allowed, backend should mediate (send email, or provide masked contact) and return only allowed signals (e.g., contact_sent: true).
-- GDPR: provide flags for consent/remove requests. Frontend needs endpoints to request deletion/soft-redaction.
+Acceptance criteria (for frontend integration)
+- Search UI displays results with clear PII indicators and a tooltip explaining redaction/deletion state.
+- Pagination works with either page-based or cursor-based approach confirmed by backend.
+- If PII is deleted, the UI must show a non-reversible notice and disable actions that would expose deleted data.
+- Error states: network error, 429 rate limit, 500 server error — all must show accessible error UI and retry option where appropriate.
+- Unit tests + integration tests (React Testing Library) for SearchList and PII display logic.
 
-## Caching & Scalability
-- Backend should provide ETag/Last-Modified for venture detail for efficient caching.
-- Cursor pagination recommended. Backend should support filtering indexes (sectors, stage) to keep list queries fast.
+Mock responses (examples)
+- Search (page-based)
+  {
+    "results": [
+      { "id": "u_123", "type": "user", "title": "Jane Doe", "pii_meta": { "email": "redacted" } }
+    ],
+    "total_count": 123
+  }
 
-## Error states (frontend must handle)
-- 4xx: 400 (bad filter), 401 (auth), 403 (access denied), 404 (not found)
-- 429: rate-limited — frontend should show retry affordance
-- 5xx: show friendly error and retry path
+- User profile
+  {
+    "id": "u_123",
+    "name": "Jane Doe",
+    "email": null,
+    "pii_meta": { "email": "deleted", "phone": "raw" }
+  }
 
-## Acceptance criteria for frontend (MVP)
-- List view: displays first page of ventures, search and filtering works, pagination (infinite scroll or load more) implemented.
-- Detail view: displays full profile, Express Interest button submits and shows success/error.
-- Bookmark action persists per user.
-- Loading, empty, and error states covered and accessible (keyboard + aria).
-- Backend provides endpoints above and returns response shapes compatible with examples.
+Questions for Marcus / backend (items requiring confirmation)
+1. Pagination: page/limit OR cursor + do you provide total_count? (UI needs to know for 'showing results x-y of N')
+2. Exact search endpoint path and query param names.
+3. Concrete JSON schema for search results and user profile (list of PII fields and pii_meta representation).
+4. RBAC: endpoint or JWT claim name for roles; canonical role strings.
+5. Error and rate-limit headers and behavior on throttling (429). Recommended client retry/backoff policy.
+6. Webhook or async completion signal for long-running deletion operations?
+7. CORS, auth header name, and whether refresh tokens use httpOnly cookie.
 
-## Trade-offs / Decisions front-end prefers
-- Cursor pagination for scalability (reversible if backend chooses offset)
-- Minimal public data to protect PII; contact flows mediated by backend
+Planned frontend deliverables (after backend confirms)
+- components/SearchBar.tsx
+- components/SearchList.tsx
+- components/PIIStatus.tsx
+- hooks/useSearch.ts (with debounce 300ms, cancellation, typing-safe responses)
+- types/api.ts (TypeScript interfaces)
+- tests/Search.integration.test.tsx
 
-## Next step for Backend (requested deliverable)
-Marcus to produce: output/specs/venture_capital_backend_feasibility.md — include APIs (with param details), DB schema sketch, infra components, scalability bottlenecks, privacy blockers, and effort estimates (small/medium/large per piece).
+Estimated frontend dev effort (dependent on API stability)
+- Implementation: 3 dev-days (search UI + PII handling)
+- Tests & polish: 1 dev-day
 
+Next steps for backend (what frontend needs from Marcus)
+- Confirm the questions above and provide example JSON payloads for each endpoint.
+- Create GH issues for the API endpoints with contracts or link to the issues so frontend can track.
+- Provide ETA for when the endpoints will be available in a dev environment.
 
-Prepared by: Kevin (Frontend)
-Date: 2026-03-06
