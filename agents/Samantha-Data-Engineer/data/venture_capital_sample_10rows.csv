@@ -1,0 +1,11 @@
+deal_id,title,description,company_name,sector_tags,funding_stage,amount_usd,round_date,lead_investor_ids,outcome_label,created_at,updated_at
+00000000-0000-0000-0000-000000000001,Smart AI,Platform for automated underwriting.,Nova Labs,ai;fintech,series_a,2500000,2021-06-15,inv_00010;inv_00120,1,2022-01-01T00:00:00Z,2022-06-01T00:00:00Z
+00000000-0000-0000-0000-000000000002,Open Payments,PCI-compliant payment gateway.,Pioneer Systems,fintech,seed,500000,2020-03-10,inv_00005,0,2020-03-11T00:00:00Z,2020-03-11T00:00:00Z
+00000000-0000-0000-0000-000000000003,Easy Care,Telehealth appointment scheduling.,Summit Health,healthcare,series_b,7500000,2019-11-05,inv_00200,1,2019-11-06T00:00:00Z,2020-01-01T00:00:00Z
+00000000-0000-0000-0000-000000000004,Cloud Insights,Analytics for cloud costs.,Blue Systems,saas,series_a,3200000,2022-02-20,inv_00011;inv_00022,,2022-02-21T00:00:00Z,2022-03-01T00:00:00Z
+00000000-0000-0000-0000-000000000005,Market Engine,Marketplace for local services.,Green Works,marketplace,seed,150000,2018-07-12,,0,2018-07-13T00:00:00Z,2018-07-13T00:00:00Z
+00000000-0000-0000-0000-000000000006,Deep Retail,Personalized retail recommendations.,Red Technologies,ai;ecommerce,series_c,20000000,2021-09-30,inv_00099,1,2021-10-01T00:00:00Z,2022-10-01T00:00:00Z
+00000000-0000-0000-0000-000000000007,NextGen Fabric,Supply-chain visibility platform.,Nimbus Logistics,saas,series_b,6800000,2020-12-12,inv_00077;inv_00088,0,2020-12-13T00:00:00Z,2021-06-01T00:00:00Z
+00000000-0000-0000-0000-000000000008,Secure Network,Enterprise VPN solution.,Vertex Dynamics,security,series_a,4200000,2019-05-22,inv_00050,,2019-05-23T00:00:00Z,2019-05-23T00:00:00Z
+00000000-0000-0000-0000-000000000009,Quantum Optimizer,Optimization engine for ads.,Quantum Analytics,adtech,seed,300000,2023-01-18,inv_00300,1,2023-01-19T00:00:00Z,2023-02-01T00:00:00Z
+00000000-0000-0000-0000-000000000010,Halo Health,Remote patient monitoring platform.,Halo Health,healthcare,series_d,45000000,2017-08-09,inv_00400;inv_00401,0,2017-08-10T00:00:00Z,2018-08-10T00:00:00Z
