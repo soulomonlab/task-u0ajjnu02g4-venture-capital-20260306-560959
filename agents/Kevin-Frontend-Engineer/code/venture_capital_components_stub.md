@@ -93,21 +93,3 @@ Acceptance criteria
 Next steps
 - #ai-backend — Marcus: please confirm the above API contract and return a sample JSON response. After you confirm, I will iterate UI to integrate real fetch and finalize props.
 
-Files created (frontend stubs & tests):
-- output/code/VCPage.tsx
-- output/code/VCSearchBar.tsx
-- output/code/VCFilters.tsx
-- output/code/VentureList.tsx
-- output/code/DealCard.tsx
-- output/code/types.ts
-- output/code/venture_capital_components_stub.md
-- output/tests/VCPage.test.tsx
-- output/tests/VCSearchBar.test.tsx
-- output/tests/VCFilters.test.tsx
-- output/tests/VentureList.test.tsx
-- output/tests/DealCard.test.tsx
-
-Notes
-- Styling: Tailwind utility classes used in stubs.
-- State: VCPage lifts state; child components are controlled via props.
-
