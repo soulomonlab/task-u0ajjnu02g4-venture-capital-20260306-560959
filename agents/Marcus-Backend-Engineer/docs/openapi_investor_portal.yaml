@@ -1,0 +1,100 @@
+openapi: 3.0.3
+info:
+  title: Investor Engagement Portal API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /engagement-links:
+    post:
+      summary: Create a time-limited engagement link (founder)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                expires_in_seconds:
+                  type: integer
+                max_views:
+                  type: integer
+                is_public_snapshot:
+                  type: boolean
+                metadata:
+                  type: object
+      responses:
+        '201':
+          description: Link created. Returns token (only time returned) and link id.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  token:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /engagement-links/{id}/revoke:
+    post:
+      summary: Revoke an engagement link (founder)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Revoked
+  /share/{token}:
+    get:
+      summary: Access shared dashboard via token
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Snapshot JSON
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  snapshot:
+                    type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Invalid or expired token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
