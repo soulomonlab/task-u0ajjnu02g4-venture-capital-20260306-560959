@@ -1,0 +1,324 @@
+openapi: 3.0.3
+info:
+  title: Venture Capital Backend API (Frontend Contract)
+  version: 1.0.0
+  description: API contract for frontend integration. Includes auth, engagements, materials, files presign/download.
+servers:
+  - url: https://api.dev.vcapp.example.com
+    description: Dev server
+paths:
+  /api/auth/login:
+    post:
+      summary: Login (dev/test)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required: [username, password]
+      responses:
+        '200':
+          description: access token response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: bearer
+                  expires_in:
+                    type: integer
+                    example: 900
+  /api/auth/refresh:
+    post:
+      summary: Refresh access token using refresh cookie + x-csrf-token header
+      responses:
+        '200':
+          description: new tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  expires_in:
+                    type: integer
+                    example: 900
+  /api/auth/me:
+    get:
+      summary: Current user info and scopes
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: user object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+  /api/engagements:
+    get:
+      summary: List engagements (cursor paging)
+      security:
+        - bearerAuth: [view_engagements]
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 25
+            maximum: 100
+        - in: query
+          name: sort
+          schema:
+            type: string
+            example: created_at.desc
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, archived, draft]
+      responses:
+        '200':
+          description: list of engagements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Engagement'
+                  meta:
+                    type: object
+                    properties:
+                      cursor:
+                        type: string
+                      has_more:
+                        type: boolean
+  /api/engagements/{engagement_id}:
+    get:
+      summary: Get engagement detail
+      security:
+        - bearerAuth: [view_engagements]
+      parameters:
+        - in: path
+          name: engagement_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: engagement detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EngagementDetail'
+  /api/engagements/{engagement_id}/materials:
+    get:
+      summary: List materials for engagement
+      security:
+        - bearerAuth: [view_materials]
+      parameters:
+        - in: path
+          name: engagement_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 25
+      responses:
+        '200':
+          description: materials list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Material'
+                  meta:
+                    type: object
+                    properties:
+                      cursor:
+                        type: string
+                      has_more:
+                        type: boolean
+  /api/files/presign:
+    post:
+      summary: Request presigned upload URL (POST policy or PUT presign)
+      security:
+        - bearerAuth: [upload_files]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+                content_type:
+                  type: string
+                size:
+                  type: integer
+              required: [filename, content_type]
+      responses:
+        '200':
+          description: presign response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload_url:
+                    type: string
+                  fields:
+                    type: object
+                  file_id:
+                    type: string
+                  expires_in:
+                    type: integer
+  /api/files/{file_id}/download:
+    get:
+      summary: Get presigned download URL (default flow)
+      security:
+        - bearerAuth: [download_files]
+      parameters:
+        - in: path
+          name: file_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: download url
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  download_url:
+                    type: string
+                  expires_in:
+                    type: integer
+  /api/files/{file_id}/stream:
+    get:
+      summary: Stream file via backend proxy (supports Range)
+      security:
+        - bearerAuth: [download_files]
+      parameters:
+        - in: path
+          name: file_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: binary file stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Engagement:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        owner:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, archived, draft]
+    Material:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mime:
+          type: string
+        size:
+          type: integer
+        uploaded_at:
+          type: string
+          format: date-time
+        sensitivity:
+          type: string
+          enum: [standard, sensitive]
+        download_url:
+          type: string
+        expires_in:
+          type: integer
+    EngagementDetail:
+      allOf:
+        - $ref: '#/components/schemas/Engagement'
+        - type: object
+          properties:
+            permissions:
+              type: object
+              properties:
+                can_view:
+                  type: boolean
+                can_download:
+                  type: boolean
+            materials:
+              type: array
+              items:
+                $ref: '#/components/schemas/Material'
