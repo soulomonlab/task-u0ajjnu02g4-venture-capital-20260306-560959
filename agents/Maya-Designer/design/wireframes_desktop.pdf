@@ -1,0 +1,72 @@
+Investor/VC Engagement Portal — Desktop Wireframes
+
+Purpose
+- Deliverable: Desktop wireframes that map UI to experiment treatments and explicit instrumentation hooks (data-event, component-id).
+- Audience: Frontend dev (Kevin), PM, Experiment owners.
+
+User flows covered
+1. Discovery → Investor list → Investor profile → Start outreach
+2. Deal discovery → Deal details → Save / Share / Request intro
+3. Composer flow → Send outreach → Track opens/replies
+
+Screen list & ASCII wireframes
+1) Dashboard / Home
+-------------------------------------------------------------
+| Topbar: Logo | Search [search input] | UserMenu [avatar]   |
+-------------------------------------------------------------
+| Left Nav | Main: Insights cards (A/B variant tiles)           |
+|         | - Quick filters (investor stage, sector)             |
+|         | - Investor list (cards / table toggle)                |
+-------------------------------------------------------------
+| Footer                                                 [CTA] |
+-------------------------------------------------------------
+
+Notes:
+- Search input: component-id="vc-search-input" data-event="search_submitted"
+- Variant treatment: Experiment X toggles card density (A: compact list, B: expanded card)
+
+2) Investor Card (list)
+-------------------------------------------------------------
+| [Logo] Investor Name (vc-investor-name)    [Follow CTA]     |
+| Tags (sectors)                                    Last active |
+| Short bio / notable investments                               |
+-------------------------------------------------------------
+
+Events:
+- follow_click -> data-event="investor_followed" component-id="vc-investor-card-<id>"
+- card_click -> data-event="investor_card_selected"
+
+3) Investor Profile
+-------------------------------------------------------------
+| Header: investor name, follow, share (component-id="vc-investor-header") |
+| Tabs: Overview | Deals | Network | Notes (tab_click -> data-event="profile_tab_selected") |
+| Main: Deal list (each row has save, intro request, share buttons)          |
+-------------------------------------------------------------
+
+4) Outreach Composer Modal
+-------------------------------------------------------------
+| Modal (component-id="vc-composer-modal")                                |
+| To: [investor chips] (emit: composer_recipient_added)                     |
+| Subject: [input] (emit: composer_subject_focused)                         |
+| Body: [rich editor] (emit: composer_body_edited - debounce 1s)            |
+| Send CTA (data-event="outreach_sent")                                   |
+-------------------------------------------------------------
+
+Experiment Annotations (showing variant treatments)
+- Experiment: CTA color test (A: Primary Blue #0A66FF, B: Primary Green #0FBF6A)
+  - Components affected: follow CTA, send CTA
+  - Indicate in wireframe with label: [Variant A/B]
+
+Instrumentation guidance (desktop)
+- Every actionable element must have:
+  - component-id: kebab-case unique id (prefix vc-)
+  - data-event attribute with event name
+  - data-experiment attribute when variant-specific (e.g., data-experiment="cta_color_test:A")
+- Use semantic HTML where possible (button, input, form). Emit events on user intent (click, submit, change).
+
+Accessibility notes
+- All icons have aria-labels
+- Keyboard focus states required for CTAs and cards
+
+Deliverable notes
+- These wireframes are annotated and intended for implementation fidelity; see component_list.md and interaction_event_mapping.md for complete props and payloads.
